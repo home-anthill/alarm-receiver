@@ -5,6 +5,7 @@
 
 ### Features
 
+- Validate `level` alarm trigger values as 1, matching motion and retaining feature/topic binding and signed replay protection.
 - Renamed the service, Cargo package/binary, Docker image, MQTT client identity, and repository references from `online-receiver` to `alarm-receiver`; the `online/+/features/+` heartbeat topic is unchanged.
 - Subscribed to `alarms/+/features/+/+` and added strict parsing for generic alarm topics.
 - Added signed `motion` and `thermostat-mode-error` alarm validation, using the registered MongoDB feature name in the canonical HMAC payload.

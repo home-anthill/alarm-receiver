@@ -111,6 +111,7 @@ fn alarm_type_for_topic(
 fn validate_alarm_payload(alarm_type: &str, payload: &Value) -> Result<(), anyhow::Error> {
     let value = payload.get("value").and_then(Value::as_f64);
     match alarm_type {
+        "level" if value != Some(1.0) => anyhow::bail!("level alarm payload value must be 1"),
         "motion" if value != Some(1.0) => anyhow::bail!("motion alarm payload value must be 1"),
         "thermostat-mode-error" if value != Some(-1.0) => {
             anyhow::bail!("thermostat mode error payload value must be -1")
@@ -444,12 +445,18 @@ fn alarm_topic_must_match_registered_feature() {
         "alarms/246e3256-f0dd-4fcb-82c5-ee20c2267eeb/features/41cb3f47-894c-45e9-90d9-a4d4de903896/motion",
     )
     .unwrap();
+    let level = alarm_receiver::models::topic::Topic::new(
+        "alarms/246e3256-f0dd-4fcb-82c5-ee20c2267eeb/features/41cb3f47-894c-45e9-90d9-a4d4de903896/level",
+    )
+    .unwrap();
     let thermostat = alarm_receiver::models::topic::Topic::new(
         "alarms/246e3256-f0dd-4fcb-82c5-ee20c2267eeb/features/41cb3f47-894c-45e9-90d9-a4d4de903896/thermostat-mode-error",
     )
     .unwrap();
 
     assert_eq!(alarm_type_for_topic(&motion, "motion").unwrap().as_deref(), Some("motion"));
+    assert_eq!(alarm_type_for_topic(&level, "level").unwrap().as_deref(), Some("level"));
+    assert!(alarm_type_for_topic(&level, "motion").is_err());
     assert_eq!(alarm_type_for_topic(&thermostat, "mode").unwrap().as_deref(), Some("thermostat-mode-error"));
     assert!(alarm_type_for_topic(&thermostat, "temperature").is_err());
 }
@@ -458,6 +465,10 @@ fn alarm_topic_must_match_registered_feature() {
 #[test_log::test]
 fn known_alarm_payloads_require_trigger_values() {
     validate_alarm_payload("motion", &serde_json::json!({ "value": 1 })).unwrap();
+    validate_alarm_payload("level", &serde_json::json!({ "value": 1 })).unwrap();
+    assert!(validate_alarm_payload("level", &serde_json::json!({ "value": 0 })).is_err());
+    assert!(validate_alarm_payload("level", &serde_json::json!({ "value": 2 })).is_err());
+    assert!(validate_alarm_payload("level", &serde_json::json!({})).is_err());
     validate_alarm_payload("thermostat-mode-error", &serde_json::json!({ "value": -1 })).unwrap();
     assert!(validate_alarm_payload("motion", &serde_json::json!({ "value": 0 })).is_err());
     assert!(validate_alarm_payload("thermostat-mode-error", &serde_json::json!({ "value": 0 })).is_err());
